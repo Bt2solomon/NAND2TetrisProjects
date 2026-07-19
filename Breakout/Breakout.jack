@@ -1,0 +1,353 @@
+/**
+* Class for the run() function that manages running the game, as well as several print functions.
+*/
+class Breakout {
+
+    /**
+    * Creates and runs the game. 
+    * @return boolean: true if the game ended because the user quit it, false if it ended for some other reason (such as winning or losing)
+    */
+    function boolean run() {
+        var int blockGroupSideMargin, blockGroupTopMargin,blockGroupBottomMargin, blockGroupColCount, blockGroupRowCount, blockGroupPadding;
+        var int bounces, score, lives;
+        var int leftBorder, rightBorder, topBorder, bottomBorder;
+        var char key;
+        var boolean exit, quit, pause, pausedLastFrame, gameOver;
+        var boolean outOfBounds, blockBroken, blockBrokenX, blockBrokenY, paddleCollision;
+        var Ball b;
+        var Paddle p;
+        var BlockGroup bg;
+
+        // variables for determining how the block group generates
+        // feel free to play with these! just note that you may throw an error if you set them to inappropriate values, since the BlockGroup generator does not check for that
+        // also note that there may be extra empty space on the right or bottom sides of the block group if its dimensions can't be neatly divided by the number of columns and rows
+        let blockGroupSideMargin = 32;      // determines the margin in pixels betwen the play area border and the sides of the BlockGroup. Default value: 32
+        let blockGroupTopMargin = 32;       // determines the margin in pixels betwen the play area border and the top of the BlockGroup. Default value: 32
+        let blockGroupBottomMargin = 124;   // determines the margin in pixels betwen the play area border and the bottom of the BlockGroup. Default value: 124
+        let blockGroupColCount = 8;         // determines how many columns of blocks to generate in the BlockGroup area. Their width is set dynamically to fit. Default value: 8
+        let blockGroupRowCount = 4;         // determines how many rows of blocks to generate in the BlockGroup area. Their height is set dynamically to fit. Default value: 4
+        let blockGroupPadding = 4;          // determines how many pixels of padding to include between each block. Default value: 4
+
+        // score-taking variables
+        let bounces = 0;
+        let score = 0;
+        let lives = 3;
+
+        // borders of the play area
+        // the play area is 320 pixels wide and 224 pixels high
+        let leftBorder = 175;
+        let rightBorder = 495;
+        let topBorder = 15;
+        let bottomBorder = 239;
+
+        // booleans for controlling game state
+        let exit = false;
+        let quit = false;
+        let pause = false;
+        let pausedLastFrame = false;
+        let gameOver = false;
+
+        //booleans for game events
+        let outOfBounds = false;
+        let blockBroken = false;
+        let blockBrokenX = false;
+        let blockBrokenY = false;
+        let paddleCollision = false;
+
+        // Ball object that handles how the ball bounces and collides with other objects
+        let b = Ball.new();
+
+        // Paddle object that can be moved by the player and bounces the ball in different directions
+        let p = Paddle.new(b, leftBorder, rightBorder, topBorder, bottomBorder);
+
+        // BlockGroup object that creates and tracks a grid of blocks that can be destroyed by the ball
+        let bg = BlockGroup.new(leftBorder + blockGroupSideMargin, topBorder + blockGroupTopMargin, rightBorder - blockGroupSideMargin, bottomBorder - blockGroupBottomMargin, blockGroupColCount, blockGroupRowCount, blockGroupPadding);
+
+        // call a helper method to print a tutorial on the left side of the screen
+        do Breakout.printTutorial();
+
+        // print stat trackers below tutorial
+        do Breakout.printLives(18, 0, lives);
+        do Breakout.printStat(19, 0, "Bounces", bounces);
+        do Breakout.printStat(20, 0, "Score", score);
+        
+        // draw an outline for border of the play area
+        do Breakout.drawBorders(leftBorder, rightBorder, topBorder, bottomBorder);
+
+        // this loop runs until the user chooses to quit. It handles all interactions between the player, paddle, ball, blocks, etc.
+        // further comments will refer to a single iteration of the loop as a frame.
+        while(~exit) {
+            // redraw the borders every frame because the ball destroys a segment whenever it hits
+            do Breakout.drawBorders(leftBorder, rightBorder, topBorder, bottomBorder);
+
+            // get user input
+            let key = Keyboard.keyPressed();
+            // if the user presses 'p', pause the loop
+            if (key = 112) { // p
+                // make sure the game only (un)pauses when the user first presses the button
+                if (~pausedLastFrame) {
+                    let pausedLastFrame = true;
+                    // print a pause message and pause the game
+                    if (~pause) {
+                        do Breakout.printPause(leftBorder, rightBorder, topBorder, bottomBorder);
+                        let pause = true;
+                    }
+                    // clear the pause message and unpause the game
+                    else {
+                        do Screen.setColor(false);
+                        do Screen.drawRectangle(leftBorder, topBorder, rightBorder, bottomBorder);
+                        let pause = false;
+                    }
+                }
+            }
+            // if user presses 'q', end the loop and flag that the user pressed quit
+            if (key = 113) { // q
+                let exit = true;
+                let quit = true;
+            }
+            else {
+                let pausedLastFrame = false;
+                if (~pause) {
+                    // this segment runs until the player hits a gameOver state
+                    do bg.drawGroup();
+                    // move the paddle
+                    do p.move(key, 4);
+
+                    // the ball movement is split into horizontal and vertical to determine which side of a block it collides with
+                    // move the ball horizontally and check for block collision
+                    do b.moveX();
+                    let blockBrokenX = b.blockCollision(bg);
+                    // move the ball vertically and check for block collision
+                    do b.moveY();
+                    let blockBrokenY = b.blockCollision(bg);
+                    
+                    // if the block was broken by horizontal movement, tells the ball to bounce horizontally
+                    if (blockBrokenX) {
+                        do b.bounceX();
+                        let blockBroken = true;
+                        let blockBrokenX = false;
+                    }
+                    else {
+                        // if the block was broken by vertical movement, tells the ball to bounce vertically
+                        if (blockBrokenY) {
+                            do b.bounceY();
+                            let blockBroken = true;
+                            let blockBrokenY = false;
+                        }
+                    }
+
+                    // handle border collisions and store whether the ball went out of bounds
+                    let outOfBounds = b.borderCollision(leftBorder, rightBorder, topBorder, bottomBorder);
+
+                    // handle paddle collisions and store whether the ball hit the paddle
+                    let paddleCollision = b.paddleCollision(p);
+
+                    // this segment runs only in the frame where the ball went out of bounds
+                    if (outOfBounds) {
+                        // reduce life count and reprint the value to the screen
+                        let lives = lives - 1;
+                        do Breakout.printLives(18, 0, lives);
+                        // also decrement the score counter to incentivize winning in as few lives as possible
+                        let score = score - 10;
+                        do Breakout.printStat(20, 0, "Score", score);
+
+                        // if there are no more lives, print a game over message and break out of the gameplay loop
+                        if (lives = 0) {
+                            do Breakout.printGameOver(leftBorder, rightBorder, topBorder, bottomBorder);
+                            let exit = true;
+                        }
+                        // if there are more lives, dispose and reconstruct the ball and paddle to give the player another chance
+                        else {
+                            do b.dispose();
+                            let b = Ball.new();
+                            do p.dispose();
+                            let p = Paddle.new(b, leftBorder, rightBorder, topBorder, bottomBorder);
+                        }
+                        // reset outOfBounds so this code segment isn't repeated accidentally
+                        let outOfBounds = false;
+                    }
+
+                    // this segment runs only in frames where the ball breaks a block. 
+                    if (blockBroken) {
+                        // increment a 'score' counter and reprint the value to the screen
+                        let score = score + 5;
+                        do Breakout.printStat(20, 0, "Score", score);
+                        // if there are no more blocks, print a victory message and break out of the gameplay loop
+                        if (bg.getBlockCount() < 1) {
+                            do Breakout.printWin(leftBorder, rightBorder, topBorder, bottomBorder);
+                            let exit = true;
+
+                        }
+                        let blockBroken = false;
+                    }
+                    
+                    // this segment runs only in frames where the ball and paddle collide. It increments a 'bounce' counter and reprints the value to the screen.
+                    // it also decrements the score counter to incentivize winning in as few bounces as possible
+                    if (paddleCollision) {
+                        let bounces = bounces + 1;
+                        do Breakout.printStat(19, 0, "Bounces", bounces);
+                        let score = score - 1;
+                        do Breakout.printStat(20, 0, "Score", score);
+
+                        let paddleCollision = false;
+                    }
+
+                }
+            }
+            // this makes the game wait very briefly between each frame. Without it, the game would run so fast it would be unplayable.
+            do Sys.wait(1);
+
+        }
+        do p.dispose();
+        do b.dispose();
+        do bg.dispose();
+
+        return quit;
+    }
+
+    /**
+    * Draws the borders of the play area.
+    * @param int leftBorder, int rightBorder: x-value of left and right borders
+    * @param int topBorder, int bottomBorder: y-value of top and bottom borders
+    */
+    function void drawBorders(int leftBorder, int rightBorder, int topBorder, int bottomBorder) {
+        do Screen.setColor(true);
+        do Screen.drawLine(leftBorder, topBorder, leftBorder, bottomBorder); // left border
+        do Screen.drawLine(rightBorder, topBorder, rightBorder, bottomBorder); // right border
+        do Screen.drawLine(leftBorder, topBorder, rightBorder, topBorder); // top border
+        do Screen.drawLine(leftBorder, bottomBorder, rightBorder, bottomBorder); // bottom border
+        return;
+    }
+
+    /**
+    * Prints a tutorial message to the left side of the screen.
+    */
+    function void printTutorial() {
+                            //"0123456789012345678901234567890123456789012345678901234567890123" <- max length for one line
+        do Output.println();
+        do Output.printString("NAND2Breakout!");
+        do Output.println();
+        do Output.printString("by Brady Solomon");
+        do Output.println();
+        do Output.println();
+        
+        do Output.printString("Release the ball");
+        do Output.println();
+        do Output.printString("with UP.");
+        do Output.println();
+        do Output.printString("Move the paddle with");
+        do Output.println();
+        do Output.printString("LEFT and RIGHT.");
+        do Output.println();
+        do Output.printString("Press p to pause");
+        do Output.println();
+        do Output.printString("or q to quit.");
+        do Output.println();
+        do Output.printString("You lose a life and");
+        do Output.println();
+        do Output.printString("score when the ball");
+        do Output.println();
+        do Output.printString("touches the floor.");
+        do Output.println();
+        do Output.printString("Break all the");
+        do Output.println();
+        do Output.printString("blocks in as few");
+        do Output.println();
+        do Output.printString("bounces as possible");
+        do Output.println();
+        do Output.printString("for a high score!");
+        do Output.println();
+
+        return;
+    }
+
+    /**
+    * Prints a life counter where each life is represented by an 'X' icon.
+    * @param int i, int j: Output row and column to start printing at
+    * @param int lives: Number of lives to print
+    */
+    function void printLives(int i, int j, int lives) {
+        var int x;
+        do Output.moveCursor(i, j);
+        do Output.printString("Lives:    ");
+        do Output.moveCursor(i, j + 7);
+        let x = 0;
+        while (x < lives) {
+            do Output.printChar(88);
+            let x = x + 1;
+        }
+        do Output.moveCursor(0,0);
+
+        return;
+    }
+    /**
+    * Prints a counter for a given stat.
+    * @param int i, int j: Output row and column to start printing at
+    * @param String stat: Name of the stat to be printed
+    * @param int value: Value of the stat to be printed
+    */
+    function void printStat(int i, int j, String stat, int value) {
+        do Output.moveCursor(i, j);
+        do Output.printString(stat);
+        do Output.printString(":    ");
+        do Output.moveCursor(i, j + stat.length() + 2);
+        do Output.printInt(value);
+        do Output.moveCursor(0,0);
+
+        return;
+    }
+
+    /**
+    * Prints a 'game over' message in the center of the play area.
+    * @param int leftBorder, int rightBorder: x-value of left and right borders
+    * @param int topBorder, int bottomBorder: y-value of top and bottom borders
+    */
+    function void printGameOver(int leftBorder, int rightBorder, int topBorder, int bottomBorder) {
+        // calculates the center pixel of the play area, then divides that by the size of an Output char image, then offsets as necessary
+        do Output.moveCursor((((bottomBorder + topBorder) / 2) / 11) - 1, (((rightBorder + leftBorder) / 2) / 8) - 5);
+        do Output.printString("Game Over!");
+        do Output.moveCursor(((bottomBorder + topBorder) / 2) / 11, (((rightBorder + leftBorder) / 2) / 8) - 9);
+        do Output.printString("Press r to restart");
+        do Output.moveCursor((((bottomBorder + topBorder) / 2) / 11) + 1, (((rightBorder + leftBorder) / 2) / 8) - 6);
+        do Output.printString("or q to quit");
+        do Output.moveCursor(0,0);
+
+        return;
+    }
+
+    /**
+    * Prints a 'you win' message in the center of the play area.
+    * @param int leftBorder, int rightBorder: x-value of left and right borders
+    * @param int topBorder, int bottomBorder: y-value of top and bottom borders
+    */
+    function void printWin(int leftBorder, int rightBorder, int topBorder, int bottomBorder) {
+        // calculates the center pixel of the play area, then divides that by the size of an Output char image, then offsets as necessary
+        do Output.moveCursor((((bottomBorder + topBorder) / 2) / 11) - 1, (((rightBorder + leftBorder) / 2) / 8) - 4);
+        do Output.printString("You win!");
+        do Output.moveCursor(((bottomBorder + topBorder) / 2) / 11, (((rightBorder + leftBorder) / 2) / 8) - 9);
+        do Output.printString("Press r to restart");
+        do Output.moveCursor((((bottomBorder + topBorder) / 2) / 11) + 1, (((rightBorder + leftBorder) / 2) / 8) - 6);
+        do Output.printString("or q to quit");
+        do Output.moveCursor(0,0);
+
+        return;
+    }
+
+    /**
+    * Prints a 'you win' message in the center of the play area.
+    * @param int leftBorder, int rightBorder: x-value of left and right borders
+    * @param int topBorder, int bottomBorder: y-value of top and bottom borders
+    */
+    function void printPause(int leftBorder, int rightBorder, int topBorder, int bottomBorder) {
+        // calculates the center pixel of the play area, then divides that by the size of an Output char image, then offsets as necessary
+        do Output.moveCursor((((bottomBorder + topBorder) / 2) / 11), (((rightBorder + leftBorder) / 2) / 8) - 3);
+        do Output.printString("PAUSED");
+        do Output.moveCursor((((bottomBorder + topBorder) / 2) / 11) + 1, (((rightBorder + leftBorder) / 2) / 8) - 9);
+        do Output.printString("Press p to unpause");
+        do Output.moveCursor(0,0);
+
+        return;
+    }
+
+
+}

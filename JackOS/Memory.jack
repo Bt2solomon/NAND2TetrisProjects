@@ -1,0 +1,112 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/12/Memory.jack
+/**
+ * This library provides two services: direct access to the computer's main
+ * memory (RAM), and allocation and recycling of memory blocks. The Hack RAM
+ * consists of 32,768 words, each holding a 16-bit binary number.
+ */ 
+class Memory {
+    static Array ram;
+    static Array freeList;
+
+    /** Initializes the class. */
+    function void init() {
+        let ram = 0;
+        let freeList = 2048;
+        let freeList[1] = 14334;
+        let freeList[0] = null;
+
+        return;
+    }
+
+    /** Returns the RAM value at the given address. */
+    function int peek(int address) {
+        return ram[address];
+    }
+
+    /** Sets the RAM value at the given address to the given value. */
+    function void poke(int address, int value) {
+        let ram[address] = value;
+        return;
+    }
+
+    /** Finds an available RAM block of the given size and returns
+     *  a reference to its base address. */
+    function Array alloc(int size) {
+    
+        var Array freeListCurrent, block;
+        var int shortestBlockAddr, shortestBlockSize;
+
+        // check if size is invalid
+        if (size < 1) {
+            do Sys.error(5);
+            return 0;
+        }
+
+        let freeListCurrent = freeList;
+        let shortestBlockAddr = 0;
+        let shortestBlockSize = 0;
+
+        while (~(freeListCurrent[0] = 0)) {
+            // if block size is >= required size plus 2
+            if (freeListCurrent[1] > (size + 1)) {
+                if (shortestBlockSize = 0) {
+                        let shortestBlockAddr = freeListCurrent;
+                        let shortestBlockSize = freeListCurrent[1];
+                }
+                else {
+                    if (freeListCurrent[1] < shortestBlockSize) {
+                        let shortestBlockAddr = freeListCurrent;
+                        let shortestBlockSize = freeListCurrent[1];
+                    }
+                }
+            }
+            let freeListCurrent = freeListCurrent[0];
+        }
+        // need to check last freeList node
+        if (freeListCurrent[1] > (size + 1)) {
+            if (shortestBlockSize = 0) {
+                    let shortestBlockAddr = freeListCurrent;
+                    let shortestBlockSize = freeListCurrent[1];
+            }
+            else {
+                if (freeListCurrent[1] < shortestBlockSize) {
+                    let shortestBlockAddr = freeListCurrent;
+                    let shortestBlockSize = freeListCurrent[1];
+                }
+            }
+        }
+        if (shortestBlockAddr = 0) { // failed to find sufficient block
+            do Sys.error(6);
+            return 0;
+        }
+        // go back to shortest block in freeList
+        let freeListCurrent = shortestBlockAddr;
+        // set return block to the end of the free block
+        let block = shortestBlockAddr + (shortestBlockSize - (size + 2));
+        // set block.next and .size
+        let block[0] = 0;
+        let block[1] = size;
+        // reduce size of free block by size of return block and its properties
+        let freeListCurrent[1] = freeListCurrent[1] - (size + 2);
+
+        // return first address of block after its properties
+        return block + 2;
+    }
+
+    /** De-allocates the given object (cast as an array) by making
+     *  it available for future allocations. */
+    function void deAlloc(Array o) {
+        var Array freeListCurrent;
+        let freeListCurrent = freeList;
+        // go to end of freeList
+        while (~(freeListCurrent[0] = 0)) {
+            let freeListCurrent = freeListCurrent[0];
+        }
+        // set freeList.next to start of block properties
+        let freeList[0] = o - 2;
+        return;
+    }    
+}

@@ -1,0 +1,132 @@
+/**
+* Class for handling BlockGroup objects. A BlockGroup is a group of Blocks in a grid formation.
+*/
+class BlockGroup {
+    field Array group;
+    field int x, y, maxX, maxY;
+    field int bWidth, bHeight;
+    field int blockCount, blockTotal;
+    
+    /**
+    * Constructs a new BlockGroup with a set size, number of rows and columns, and padding.
+    * @param int leftX, int topY, int rightX, int bottomY: Edges of the space the BlockGroup should fill
+    * @param int cols, int rows: The number of columns and rows of Blocks to generate
+    * @param int padding: The amount of space to leave between each Block
+    */
+    constructor BlockGroup new(int leftX, int topY, int rightX, int bottomY, int cols, int rows, int padding) {
+        // loop counters
+        var int i, c, r;    
+        
+        // initialize field variables
+        let x = leftX;
+        let y = topY;
+        let maxX = rightX;
+        let maxY = bottomY;
+        // calculate the width and height of an individual Block
+        let bWidth = ((maxX - x) / cols) - padding;
+        let bHeight = ((maxY - y) / rows) - padding;
+
+        let blockCount = cols * rows;
+        let blockTotal = blockCount;
+
+        // create an array large enough to fit every Block
+        let group = Array.new(blockTotal);
+        
+        // add a new Block to the array for every [col, row]
+        let i = 0;
+        let r = 0;
+        while (r < rows) {
+            let c = 0;
+            while (c < cols) {
+                let group[i] = Block.new(x + ((bWidth + padding) * c), y + ((bHeight + padding) * r));
+                let c = c + 1;
+                let i = i + 1;
+            }
+            let r = r + 1;
+        }
+
+        return this;
+    }
+    /**
+    * Checks if a given ball has collided with any Blocks and set them to inactive if so.
+    * @param Ball ball: The ball object to check for collisions
+    * @return boolean: True if the ball collided with a Block, false otherwise
+    */
+    method boolean ballCollision(Ball ball) {
+        var Block b;
+        var int i;
+        // only check on blocks if ball is in the group's area, to save a bit of time
+        if ((ball.getX() < maxX) | (ball.getY() < maxY) | ((ball.getX() + ball.getWidth()) > x) | ((ball.getY() + ball.getHeight()) > y)) {
+            let i = 0;
+            // iterate through all blocks
+            while (i < blockTotal) {
+                let b = group[i];
+                // only check active blocks
+                if (b.getState()) {
+
+                    if ((ball.getX() < (b.getX() + bWidth)) & 
+                       ((ball.getX() + ball.getWidth()) > b.getX()) & 
+                       (ball.getY() < (b.getY() + bHeight)) & 
+                       ((ball.getY() + ball.getHeight()) > b.getY())) {
+                        do b.setState(false);
+                        let blockCount = blockCount - 1;
+                        return true;
+                    }
+                }
+                let i = i + 1;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+    * Gets the number of active blocks remaining in the group.
+    * @return int: Number of active blocks in the group
+    */
+    method int getBlockCount() {
+        return blockCount;
+    }
+
+    /**
+    * Draws all blocks in the group to the screen.
+    */
+    method void drawGroup() {
+        var int i;
+        let i = 0;
+        while (i < blockTotal) {
+            do drawBlock(i);
+            let i = i + 1;
+        }
+        return;
+    }
+    /**
+    * Draws a single block in the group, coloring it based on its state.
+    * @param int i: The index of the block in the group array.
+    */
+    method void drawBlock(int i) {
+        var Block b;
+        let b = group[i];
+        do Screen.setColor(b.getState());
+        do Screen.drawRectangle(b.getX(), b.getY(), b.getX() + bWidth, b.getY() + bHeight);
+        return;
+
+    }
+
+    /**
+    * Disposes of all Block objects and deallocates their memory, then does the same to this BlockGroup object.
+    */
+    method void dispose() {
+        var Block b;
+        var int i;
+        let i = 0;
+        while (i < blockTotal) {
+            let b = group[i];
+            do b.dispose();
+            let i = i + 1;
+        }
+        do group.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+}

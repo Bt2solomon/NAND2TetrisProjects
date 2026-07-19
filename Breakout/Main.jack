@@ -1,0 +1,38 @@
+class Main {
+    /**
+    * Main function that creates a Breakout game.
+    */
+    function void main() {
+        var boolean quit, restart;
+        var char key;
+        let quit = false;
+        let restart = true;
+        while(~quit) {
+            
+            if (restart) {
+                // run the game
+                do Screen.clearScreen();
+                let quit = Breakout.run();
+                let restart = false;
+            }
+            let key = Keyboard.keyPressed();
+            // if user presses 'r', run Breakout again
+            if (key = 114) { // r
+                let restart = true;
+            }
+            // if user presses 'q', end the loop
+            if (key = 113) { // q
+                let quit = true;
+            }
+
+            do Sys.wait(1);
+
+        }
+        // at the end, clear the screen, print a message, t halt the program.
+        do Screen.clearScreen();
+        do Output.moveCursor(0,0);
+        do Output.printString("Program halted.");
+        do Sys.halt();
+        return;
+    }
+}

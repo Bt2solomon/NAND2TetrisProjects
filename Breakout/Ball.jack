@@ -1,0 +1,190 @@
+/**
+* Class for handling ball objects, including motion and collisions with borders or the paddle. 
+* The ball is a small square rather than an actual circle to reflect the way 
+* it only bounces vertically or horizontally, rather than diagonally as one 
+* might expect when seeing a circle hit the corner of a block.
+*/
+class Ball {
+
+    field int x, y, width, height;
+    field int verticalSpeed, horizontalSpeed;
+
+    /**
+    * Constructs new ball and initializes values
+    */
+    constructor void new() {
+        let width = 8;
+        let height = 8;
+        let x = 512 - width;
+        let y = 256 - height;
+        let verticalSpeed = 0;
+        let horizontalSpeed = 0;
+
+        return this;
+    }
+
+    /**
+    * Sets ball position to be on top of the center of the paddle. Called in Paddle.move() until the ball is released.
+    * @param int paddleX: x value of the center of the paddle dragging the ball
+    * @param int paddleY: y value of the top of the paddle dragging the ball
+    */
+    method void drag(int paddleX, int paddleY) {
+        do draw(false);
+        let x = paddleX - (width / 2);
+        let y = paddleY - height;
+        do draw(true);
+        return;
+    }
+
+    /**
+    * Releases the ball from the paddle by giving it vertical speed.
+    */
+    method void release() {
+        let verticalSpeed = -4;
+        let horizontalSpeed = 2;
+
+        return;
+    }
+
+    /**
+    * Handles ball bouncing off borders by inverting the horizontal or vertical speed.
+    * @param int leftBorder, int rightBorder: x-value of left and right borders
+    * @param int topBorder, int bottomBorder: y-value of top and bottom borders
+    * @return boolean: true if the ball is out of bounds, false otherwise
+    */
+    method boolean borderCollision(int leftBorder, int rightBorder, int topBorder, int bottomBorder) {
+        if (x < leftBorder) { 
+            let horizontalSpeed = -horizontalSpeed;
+        }
+        if ((x + width) > rightBorder) { 
+            let horizontalSpeed = -horizontalSpeed;
+        }
+        if (y < topBorder) { 
+            let verticalSpeed = -verticalSpeed;
+        }
+        if ((y + height) > bottomBorder) { 
+            let verticalSpeed = 0;
+            let horizontalSpeed = 0;
+            return true;
+        }
+
+        return false;
+    }
+
+    method boolean blockCollision(BlockGroup bg) {
+        return bg.ballCollision(this);
+    }
+
+    /**
+    * Handles ball bouncing off the paddle. The ball's horizontal speed is based on how far from the center of the paddle the collision is.
+    * The ball's horizontal speed is calculated in three parts to ensure symmetry when using integer division:
+    * First, the difference between the ball's position and the center of the paddle is calculated.
+    * Then, offset that value to the right by half the amount used in the third step's division.
+    *   If the value is negative, subtract 1 from that.  
+    *   This centers the distribution of speeds on the center of the paddle. 
+    *   Without this step, the final result would result in setting horizontal 
+    *   speed to 1 when colliding 1 pixel to the right of center, or 0 when 
+    *   colliding several pixels to the left of center.
+    * Finally, divide by an eigth of the paddle's width.
+    *   This results in the speed being set to 0 at the center of the paddle and 4 at the edges.
+    * @param Paddle p: Paddle object to check for collisions
+    * @return boolean: true if the ball collided with the paddle, false otherwise
+    */
+    method boolean paddleCollision(Paddle p) {
+        var int ballCenterX, paddleWidth, paddleX, paddleCenter;
+        let ballCenterX = x + (width / 2);
+        let paddleWidth = p.getWidth();
+        let paddleX = p.getX();
+        let paddleCenter = paddleX + (paddleWidth / 2);
+        // if ball is moving down and reaches the height of the paddle
+        if ((verticalSpeed > 0) & (p.getY() < (y + height))) { 
+            // if the center of the ball is between the horizontal bounds of the paddle
+            if (((ballCenterX) > paddleX) & (ballCenterX < (paddleX + paddleWidth))) {
+
+                let verticalSpeed = -verticalSpeed;
+                // horizontal speed is based on distance from the center of the paddle
+                // ball is left of paddle center
+                if (ballCenterX < paddleCenter) {
+                    let horizontalSpeed = (ballCenterX - paddleCenter + (paddleWidth / 16) - 1) / (paddleWidth / 8);
+                }
+                // ball is right of paddle center
+                else {
+                    let horizontalSpeed = (ballCenterX - paddleCenter + (paddleWidth / 16)) / (paddleWidth / 8);
+                }
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+    /** 
+    * Calculates and applies the next horizontal position of the ball based on current velocity.
+    */
+    method void moveX() {
+        do draw(false);
+        let x = x + horizontalSpeed;
+        do draw(true);
+        return;
+    }
+    /** 
+    * Calculates and applies the next vertical position of the ball based on current velocity.
+    */
+    method void moveY() {
+        do draw(false);
+        let y = y + verticalSpeed;
+        do draw(true);
+        return;
+    }
+
+    /**
+    * Inverts the horizontal speed of the ball.
+    */
+    method void bounceX() {
+        let horizontalSpeed = -horizontalSpeed;
+        return;
+    }
+    /**
+    * Inverts the vertical speed of the ball.
+    */
+    method void bounceY() {
+        let verticalSpeed = -verticalSpeed;
+        return;
+    }
+
+    /**
+    * Draws or erases the ball.
+    * @param boolean color: draws the ball in black when true, or white otherwise.
+    */
+    method void draw(boolean color) {
+        do Screen.setColor(color);
+        do Screen.drawRectangle(x, y, x + width, y + height);
+        return;
+    }
+
+    /**
+    * Getter methods to retrieve position and dimensions of ball
+    */
+    method int getX() {
+        return x;
+    }
+    method int getY() {
+        return y;
+    }
+    method int getWidth() {
+        return width;
+    }
+    method int getHeight() {
+        return height;
+    }
+
+    /**
+    * Disposes of this object and deallocates its memory.
+    */
+    method void dispose() {
+        do draw(false);
+        do Memory.deAlloc(this);
+        return;
+    }
+
+}

@@ -1,0 +1,103 @@
+/**
+* Class for handling Paddle objects, including movement and dragging and releasing a Ball.
+*/
+class Paddle {
+
+    field int x, width, y, height;
+    field int minX, minY;
+    field int maxX, maxY;
+    field boolean ballReleased;
+    field Ball b;
+    
+    /**
+    * Constructs a paddle object with a ball attached.
+    * @param Ball ball: Ball object to be dragged by the paddle until released.
+    * @param int leftBorder, int rightBorder: x-value of left and right borders
+    * @param int topBorder, int bottomBorder: y-value of top and bottom borders
+    */
+    constructor Paddle new(Ball ball, int leftBorder, int rightBorder, int topBorder, int bottomBorder) {
+        let b = ball;
+
+        let minX = leftBorder;
+        let maxX = rightBorder;
+        let minY = topBorder;
+        let maxY = bottomBorder;
+
+        let width = 64;
+        let height = 8;
+
+        let ballReleased = false;
+
+        let x = ((minX + maxX) / 2) - (width / 2);
+        let y = maxY - (height * 2);
+
+        return this;
+    }
+
+/**
+* Handles moving left (false) or right (true), or releases the ball (up).
+* @param char direction: value of key currently being pressed
+* @param int speed: speed in px/frame to move the paddle
+*/
+    method void move(char direction, int speed) {
+
+        do draw(false);
+        // left
+        if ((direction = 130) & (x > (minX + speed))) {
+            let x = x - speed;
+        }
+        // right
+        if ((direction = 132) & (x < (maxX - width - speed))) {
+            let x = x + speed;
+        }
+        // up
+        if ((direction = 131) & (~ballReleased)) {
+            do b.release();
+            let ballReleased = true;
+        }
+
+
+        if (~ballReleased) {
+            do b.drag(x + (width / 2), y);
+        }
+        do draw(true);
+        return;
+    }
+
+    /**
+    * Draws or erases the paddle.
+    * @param boolean color: draws the paddle in black when true, or white otherwise.
+    */
+    method void draw(boolean color) {
+        do Screen.setColor(color);
+        do Screen.drawRectangle(x, y, x + width, y + height); // paddle
+
+        return;
+    }
+
+    /**
+    * Getter methods to retrieve position and dimensions of paddle
+    */
+    method int getX() {
+        return x;
+    }
+    method int getY() {
+        return y;
+    }
+    method int getWidth() {
+        return width;
+    }
+    method int getHeight() {
+        return height;
+    }
+    
+    /**
+    * Disposes of this object and deallocates its memory.
+    */
+    method void dispose() {
+        do draw(false);
+        do Memory.deAlloc(this);
+        return;
+    }
+
+}

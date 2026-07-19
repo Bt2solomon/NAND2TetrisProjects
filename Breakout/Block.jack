@@ -1,0 +1,58 @@
+/**
+* Class for Block objects. A Block consists of X and Y coordinates and a boolean state (representing whether the block is active or destroyed).
+*/
+class Block {
+    field int x, y;
+    field boolean state;
+    /**
+    * Creates a new Block object with given coordinates.
+    * @param int xCoord, int yCoord: The x and y coordinates of the block
+    */
+    constructor Block new(int xCoord, int yCoord) {
+        let x = xCoord;
+        let y = yCoord;
+        let state = true;
+        return this;
+    }
+
+    /**
+    * Gets the x coordinate of the block.
+    * @return int: The x coordinate of the block
+    */
+    method int getX() {
+        return x;
+    }
+    /**
+    * Gets the y coordinate of the block.
+    * @return int: The y coordinate of the block
+    */
+    method int getY() {
+        return y;
+    }
+
+    /**
+    * Sets the state of the block
+    * @param boolean blockState: The value that state should be set to
+    */
+    method void setState(boolean blockState) {
+        let state = blockState;
+        return;
+    }
+    /**
+    * Gets the state of the block. This is true when the block is active and false when the block has been destroyed.
+    * @return boolean: The state of the block
+    */
+    method boolean getState() {
+        return state;
+    }
+
+    /**
+    * Disposes of this object and deallocates its memory.
+    */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+
+}
